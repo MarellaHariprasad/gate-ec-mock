@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GA Bulk Upload (Admin)</title>
+<style>
+  body{font-family:system-ui,Arial;margin:0;background:#f4f6fb;color:#111827}
+  header{
+    background:radial-gradient(circle at center, #2e7bff 0%, #0b3c91 45%, #041a3a 100%);
+    color:#fff;padding:14px;text-align:center;font-weight:800
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:14px}
+  .card{background:#fff;border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+  textarea{width:100%;height:320px;border-radius:12px;border:1px solid #d1d5db;padding:12px;font-family:monospace;font-size:13px}
+  button{border:none;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer}
+  .btn{background:#0b3c91;color:#fff}
+  .btn2{background:#111827;color:#fff}
+  .muted{color:#6b7280;font-size:13px}
+  .ok{color:#0a7d2f;font-weight:900}
+  .bad{color:#d90429;font-weight:900}
+</style>
+</head>
+<body>
+
+<header>GA Bulk Upload (Admin)</header>
+
+<div class="wrap">
+  <div class="card">
+    <b>Instructions</b>
+    <div class="muted" style="margin-top:6px">
+      1) Paste JSON array of questions below<br/>
+      2) Click Upload<br/>
+      3) It will add all docs into Firestore collection: <b>questions</b>
+    </div>
+  </div>
+
+  <div class="card">
+    <b>Paste Questions JSON</b>
+    <textarea id="jsonBox" placeholder='[ { "subject":"GA", "topic":"Percentages", "question":"...", "options":["A","B","C","D"], "answer":2 } ]'></textarea>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn" onclick="uploadNow()">Upload to Firebase</button>
+      <button class="btn2" onclick="location.href='index.html'">Back to App</button>
+    </div>
+    <div id="status" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC_f6lvDO9LeSE22kv4HIhWLj846bmRla8",
+    authDomain: "gate-ec-mock.firebaseapp.com",
+    projectId: "gate-ec-mock",
+    storageBucket: "gate-ec-mock.firebasestorage.app",
+    messagingSenderId: "668980846025",
+    appId: "1:668980846025:web:a960f983f2e6311fad1c18"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const statusEl = document.getElementById("status");
+  const box = document.getElementById("jsonBox");
+
+  window.uploadNow = async function(){
+    statusEl.innerHTML = `<span class="muted">Uploading... please wait ⏳</span>`;
+
+    let arr;
+    try{
+      arr = JSON.parse(box.value.trim());
+      if(!Array.isArray(arr)) throw new Error("JSON must be an array []");
+    } catch(e){
+      statusEl.innerHTML = `<span class="bad">❌ Invalid JSON:</span> ${e.message}`;
+      return;
+    }
+
+    let ok = 0, fail = 0;
+
+    for(const q of arr){
+      try{
+        // Basic validation
+        if(
+          typeof q.subject !== "string" ||
+          typeof q.topic !== "string" ||
+          typeof q.question !== "string" ||
+          !Array.isArray(q.options) ||
+          q.options.length !== 4 ||
+          typeof q.answer !== "number"
+        ){
+          throw new Error("Bad format in one question");
+        }
+
+        await addDoc(collection(db, "questions"), q);
+        ok++;
+      } catch(err){
+        console.log("Upload failed for one:", err);
+        fail++;
+      }
+    }
+
+    statusEl.innerHTML = `
+      <div class="ok">✅ Uploaded: ${ok}</div>
+      <div class="${fail>0?'bad':'muted'}">Failed: ${fail}</div>
+      <div class="muted">Now open index.html and start GA quiz.</div>
+    `;
+  }
+</script>
+
+</body>
+</html>
