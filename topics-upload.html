@@ -3,238 +3,214 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Upload Topics to Firebase</title>
+  <title>Topics Bulk Upload (Admin)</title>
+
   <style>
     body{
+      margin:0;
       font-family: Arial, sans-serif;
-      background:#0b1220;
-      color:#fff;
-      padding:20px;
+      background:#f5f7fb;
+      color:#111;
     }
-    h1{font-size:22px;}
-    .box{
-      background:#111a2e;
-      border:1px solid #1f2b4d;
-      border-radius:12px;
-      padding:15px;
-      margin-top:15px;
+    header{
+      background: linear-gradient(90deg, #0b2a5f, #1d5fbf);
+      color:white;
+      padding:18px;
+      text-align:center;
+      font-size:20px;
+      font-weight:700;
+    }
+    .container{
+      max-width:950px;
+      margin:20px auto;
+      padding:0 14px;
+    }
+    .card{
+      background:white;
+      border-radius:16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      padding:18px;
+      margin-bottom:16px;
+    }
+    .card h2{
+      margin:0 0 10px 0;
+      font-size:18px;
     }
     textarea{
       width:100%;
-      height:300px;
-      border-radius:10px;
-      border:1px solid #2b3a63;
-      background:#0c1426;
-      color:#fff;
-      padding:10px;
+      min-height:280px;
+      border-radius:12px;
+      border:1px solid #d7dbe6;
+      padding:12px;
       font-size:14px;
       outline:none;
+      resize:vertical;
+      background:#fbfcff;
+      box-sizing:border-box;
+    }
+    .btns{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:12px;
     }
     button{
-      margin-top:10px;
-      padding:10px 16px;
       border:none;
-      border-radius:10px;
-      background:#2f7cff;
-      color:white;
-      font-weight:bold;
+      padding:12px 16px;
+      border-radius:12px;
+      font-weight:700;
       cursor:pointer;
+      font-size:14px;
     }
-    button:hover{opacity:0.9;}
-    .log{
-      white-space:pre-wrap;
+    .btn-primary{ background:#0b5ed7; color:white; }
+    .btn-dark{ background:#111827; color:white; }
+    .btn-danger{ background:#b91c1c; color:white; }
+
+    .msg{
+      margin-top:12px;
+      padding:12px;
+      border-radius:12px;
+      font-weight:700;
+      display:none;
+      word-break:break-word;
+    }
+    .success{ background:#dcfce7; color:#166534; display:block; }
+    .error{ background:#fee2e2; color:#991b1b; display:block; }
+    .small{
       font-size:13px;
-      color:#b8d1ff;
-      margin-top:10px;
+      color:#475569;
+      line-height:1.5;
     }
-    .success{color:#00ff99;}
-    .error{color:#ff5c5c;}
+    code{
+      background:#eef2ff;
+      padding:2px 6px;
+      border-radius:8px;
+      font-size:13px;
+    }
   </style>
 </head>
+
 <body>
+  <header>Topics Bulk Upload (Admin)</header>
 
-  <h1>🔥 Bulk Upload: Subjects + Topics + Overview → Firebase</h1>
+  <div class="container">
 
-  <div class="box">
-    <p><b>Step 1:</b> Paste JSON below (or use default)</p>
+    <div class="card">
+      <h2>Instructions</h2>
+      <div class="small">
+        1) Paste JSON array below <br/>
+        2) Click <b>Upload Topics to Firebase</b> <br/>
+        3) It will add/update docs into Firestore collection: <code>topics</code> <br/><br/>
 
-    <textarea id="jsonInput"></textarea>
+        <b>Format:</b><br/>
+        <code>
+          [{"subject":"GA","topic":"Percentages","overview":"..."}]
+        </code><br/><br/>
 
-    <button id="uploadBtn">🚀 Upload to Firestore</button>
-    <div class="log" id="logBox"></div>
+        ✅ This uploader uses docId like <code>GA_Percentages</code> so it overwrites safely (no duplicates).
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Paste Topics JSON</h2>
+      <textarea id="jsonBox" placeholder='Paste JSON array here...'></textarea>
+
+      <div class="btns">
+        <button class="btn-primary" id="uploadBtn">Upload Topics to Firebase</button>
+        <button class="btn-dark" id="backBtn">Back to App</button>
+        <button class="btn-danger" id="clearBtn">Clear Box</button>
+      </div>
+
+      <div id="message" class="msg"></div>
+    </div>
+
   </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-  import {
-    getFirestore,
-    collection,
-    doc,
-    setDoc,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // ✅ Your Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyC_f6lvDO9LeSE22kv4HIhWLj846bmRla8",
-    authDomain: "gate-ec-mock.firebaseapp.com",
-    projectId: "gate-ec-mock",
-    storageBucket: "gate-ec-mock.firebasestorage.app",
-    messagingSenderId: "668980846025",
-    appId: "1:668980846025:web:a960f983f2e6311fad1c18"
-  };
+    // ✅ YOUR FIREBASE CONFIG (Already added)
+    const firebaseConfig = {
+      apiKey: "AIzaSyC_f6lvDO9LeSE22kv4HIhWLj846bmRla8",
+      authDomain: "gate-ec-mock.firebaseapp.com",
+      projectId: "gate-ec-mock",
+      storageBucket: "gate-ec-mock.firebasestorage.app",
+      messagingSenderId: "668980846025",
+      appId: "1:668980846025:web:a960f983f2e6311fad1c18"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  const jsonInput = document.getElementById("jsonInput");
-  const uploadBtn = document.getElementById("uploadBtn");
-  const logBox = document.getElementById("logBox");
+    const jsonBox = document.getElementById("jsonBox");
+    const message = document.getElementById("message");
 
-  function log(msg, type=""){
-    logBox.innerHTML += (type ? `<span class="${type}">` : "") + msg + (type ? "</span>" : "") + "\n";
-    logBox.scrollTop = logBox.scrollHeight;
-  }
-
-  // ✅ FULL SUBJECTS + TOPICS + OVERVIEW (from your EC syllabus sheet)
-  const DEFAULT_DATA = [
-    {
-      "subject": "Engineering Mathematics",
-      "topics": [
-        {"topic":"Linear Algebra","overview":"Covers vector spaces, matrices, eigenvalues/eigenvectors, rank and linear equation solutions."},
-        {"topic":"Calculus","overview":"Mean value theorems, integration techniques, partial derivatives, maxima/minima and multiple integrals."},
-        {"topic":"Differential Equations","overview":"First and higher order differential equations, PDEs, boundary value problems."},
-        {"topic":"Vector Analysis","overview":"Vectors, gradient, divergence, curl and Gauss/Green/Stokes theorems."},
-        {"topic":"Complex Analysis","overview":"Analytic functions, Cauchy theorems, Taylor/Laurent series and residues."},
-        {"topic":"Probability and Statistics","overview":"Probability distributions, mean/variance, conditional probability and standard distributions."}
-      ]
-    },
-    {
-      "subject": "Networks, Signals and Systems",
-      "topics": [
-        {"topic":"Circuit Analysis","overview":"KCL/KVL, Thevenin/Norton, Laplace based RL/RC/RLC analysis and power transfer."},
-        {"topic":"Two Port Networks","overview":"Two-port parameters and wye-delta transformations."},
-        {"topic":"Continuous-time Signals","overview":"Fourier series/transform, sampling theorem and applications."},
-        {"topic":"Discrete-time Signals","overview":"DTFT, DFT, Z-transform and discrete-time processing."},
-        {"topic":"LTI Systems","overview":"Impulse response, convolution, causality, stability, poles/zeros and frequency response."}
-      ]
-    },
-    {
-      "subject": "Electronic Devices",
-      "topics": [
-        {"topic":"Semiconductor Physics","overview":"Energy bands, intrinsic/extrinsic semiconductors and carrier concentration."},
-        {"topic":"Carrier Transport","overview":"Drift/diffusion, mobility, resistivity, recombination, Poisson and continuity equations."},
-        {"topic":"Diodes","overview":"PN junction, Zener diode basics and applications."},
-        {"topic":"Transistors & MOS","overview":"BJT, MOS capacitor, MOSFET fundamentals."},
-        {"topic":"Optoelectronic Devices","overview":"LED, photodiode and solar cell basics."}
-      ]
-    },
-    {
-      "subject": "Analog Circuits",
-      "topics": [
-        {"topic":"Diode Circuits","overview":"Clipping, clamping and rectifier circuits."},
-        {"topic":"BJT and MOSFET Amplifiers","overview":"Biasing, AC coupling, small-signal analysis and frequency response."},
-        {"topic":"Current Mirrors & Differential Amplifiers","overview":"Current mirror basics and differential amplifier operation."},
-        {"topic":"Op-amp Circuits","overview":"Amplifiers, summers, integrators, differentiators and practical op-amp usage."},
-        {"topic":"Active Filters","overview":"Design and analysis of active filters using op-amps."},
-        {"topic":"Schmitt Triggers & Oscillators","overview":"Comparator hysteresis circuits and oscillator basics."}
-      ]
-    },
-    {
-      "subject": "Digital Circuits",
-      "topics": [
-        {"topic":"Number Representations","overview":"Binary, integer and floating point representation."},
-        {"topic":"Boolean Algebra & K-Maps","overview":"Logic minimization using Boolean identities and Karnaugh maps."},
-        {"topic":"CMOS Logic Gates","overview":"Logic gates and static CMOS implementations."},
-        {"topic":"Combinational Circuits","overview":"Arithmetic circuits, code converters, MUX/DEMUX and decoders."},
-        {"topic":"Sequential Circuits","overview":"Flip-flops, counters, shift registers and FSMs."},
-        {"topic":"Timing & Delays","overview":"Propagation delay, setup/hold time and critical path delay."},
-        {"topic":"Data Converters","overview":"Sample & hold, ADCs and DACs."},
-        {"topic":"Semiconductor Memories","overview":"ROM, SRAM and DRAM basics."},
-        {"topic":"Computer Organization","overview":"Instructions, addressing, ALU, datapath/control and pipelining."}
-      ]
-    },
-    {
-      "subject": "Control Systems",
-      "topics": [
-        {"topic":"Basics & Feedback","overview":"Control components, feedback principle and transfer functions."},
-        {"topic":"Block Diagrams & Signal Flow","overview":"Block diagram reduction and signal flow graphs."},
-        {"topic":"Time Response","overview":"Transient/steady-state analysis of LTI systems."},
-        {"topic":"Frequency Response","overview":"Bode plots and frequency response concepts."},
-        {"topic":"Stability Criteria","overview":"Routh-Hurwitz and Nyquist stability analysis."},
-        {"topic":"Root Locus","overview":"Root locus plots and system behavior."},
-        {"topic":"Compensation","overview":"Lag, lead and lag-lead compensators."},
-        {"topic":"State Space","overview":"State variable model and solving state equations."}
-      ]
-    },
-    {
-      "subject": "Communications",
-      "topics": [
-        {"topic":"Random Processes","overview":"Autocorrelation, PSD, white noise and filtering through LTI systems."},
-        {"topic":"Analog Communications","overview":"AM/FM modulation-demodulation and superheterodyne receivers."},
-        {"topic":"Information Theory","overview":"Entropy, mutual information and channel capacity."},
-        {"topic":"Digital Communications","overview":"PCM/DPCM, ASK/PSK/FSK/QAM and detection techniques."},
-        {"topic":"Error Control Coding","overview":"Hamming codes and CRC fundamentals."}
-      ]
-    },
-    {
-      "subject": "Electromagnetics",
-      "topics": [
-        {"topic":"Maxwell’s Equations","overview":"Differential/integral forms, boundary conditions and wave equation."},
-        {"topic":"Plane Waves","overview":"Reflection/refraction, polarization, phase/group velocity and skin depth."},
-        {"topic":"Transmission Lines","overview":"TL equations, impedance matching and transformations."},
-        {"topic":"S-Parameters & Smith Chart","overview":"Scattering parameters and Smith chart applications."},
-        {"topic":"Waveguides","overview":"Rectangular and circular waveguides basics."},
-        {"topic":"Optical Fibers","overview":"Light propagation in optical fibers."},
-        {"topic":"Antennas","overview":"Dipole/monopole antennas and linear antenna arrays."}
-      ]
-    }
-  ];
-
-  jsonInput.value = JSON.stringify(DEFAULT_DATA, null, 2);
-
-  uploadBtn.addEventListener("click", async () => {
-    logBox.innerHTML = "";
-    let data;
-
-    try {
-      data = JSON.parse(jsonInput.value);
-    } catch (e) {
-      log("❌ Invalid JSON. Fix it and try again.", "error");
-      return;
+    function showMsg(text, type){
+      message.className = "msg " + type;
+      message.innerText = text;
     }
 
-    try {
-      let totalTopics = 0;
-      for (const subj of data) {
-        if (!subj.subject || !Array.isArray(subj.topics)) continue;
+    function safeId(text){
+      return (text || "")
+        .toString()
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^\w\-]/g, "");
+    }
 
-        for (const t of subj.topics) {
-          if (!t.topic) continue;
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      jsonBox.value = "";
+      showMsg("Cleared.", "success");
+    });
 
-          // 🔥 Firestore path:
-          // topics/{subject__topic}
-          const docId = `${subj.subject}__${t.topic}`.replaceAll("/", "-");
+    document.getElementById("backBtn").addEventListener("click", () => {
+      window.location.href = "./index.html";
+    });
 
-          await setDoc(doc(collection(db, "topics"), docId), {
-            subject: subj.subject,
-            topic: t.topic,
-            overview: t.overview || "",
-            createdAt: serverTimestamp()
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
+      try{
+        const raw = jsonBox.value.trim();
+        if(!raw){
+          showMsg("❌ Paste JSON first!", "error");
+          return;
+        }
+
+        const topicsArray = JSON.parse(raw);
+
+        if(!Array.isArray(topicsArray)){
+          showMsg("❌ JSON must be an ARRAY like [ {...}, {...} ]", "error");
+          return;
+        }
+
+        let count = 0;
+
+        for(const t of topicsArray){
+          const subject = (t.subject || "").trim();
+          const topic = (t.topic || "").trim();
+          const overview = (t.overview || "").trim();
+
+          if(!subject || !topic){
+            continue;
+          }
+
+          const docId = safeId(subject) + "_" + safeId(topic);
+
+          await setDoc(doc(db, "topics", docId), {
+            subject,
+            topic,
+            overview: overview || "Overview coming soon"
           }, { merge: true });
 
-          totalTopics++;
-          log(`✅ Uploaded: ${subj.subject} → ${t.topic}`, "success");
+          count++;
         }
+
+        showMsg(`✅ Upload Success! Added/Updated ${count} topics in Firestore (topics collection)`, "success");
+
+      }catch(err){
+        showMsg("❌ Upload failed: " + err.message, "error");
       }
-
-      log(`\n🎉 DONE! Total topics uploaded: ${totalTopics}`, "success");
-    } catch (err) {
-      console.error(err);
-      log(`❌ Upload failed: ${err.message}`, "error");
-    }
-  });
-</script>
-
+    });
+  </script>
 </body>
 </html>
